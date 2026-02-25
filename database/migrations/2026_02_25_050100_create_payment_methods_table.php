@@ -10,7 +10,7 @@ return new class extends Migration
         Schema::create('payment_methods', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->timestamps(); // includes created_at & updated_at
+            $table->timestamps();
         });
     }
 
