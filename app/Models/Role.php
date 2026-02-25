@@ -1,15 +1,20 @@
 <?php
 
-namespace App\Models;
+    namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+    use App\Enums\UserRole;
+    use Illuminate\Database\Eloquent\Model;
 
-class Role extends Model
-{
-    protected $fillable = ['name'];
-
-    public function users()
+    class Role extends Model
     {
-        return $this->hasMany(User::class);
+        protected $fillable = ['name'];
+
+        protected $casts = [
+            'name' => UserRole::class, // Automatically converts string to Enum
+        ];
+
+        public function users()
+        {
+            return $this->hasMany(User::class);
+        }
     }
-}

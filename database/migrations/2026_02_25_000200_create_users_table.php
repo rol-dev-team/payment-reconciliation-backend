@@ -10,11 +10,15 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('full_name');
+
+            $table->string('name');
             $table->string('username')->unique();
-            $table->string('email')->unique();
             $table->string('password');
-            $table->foreignId('role_id')->constrained('roles'); // foreign key to roles
+
+            $table->foreignId('role_id')
+                  ->constrained()
+                  ->cascadeOnDelete();
+
             $table->rememberToken();
             $table->timestamps();
         });

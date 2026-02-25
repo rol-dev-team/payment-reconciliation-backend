@@ -3,20 +3,18 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens; // ← add this
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable; // ← include HasApiTokens
+    use HasFactory;
 
     protected $fillable = [
-        'full_name',
+        'name',
         'username',
-        'email',
         'password',
-        'role_id'
+        'role_id',
     ];
 
     protected $hidden = [
@@ -24,11 +22,14 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    protected $casts = [
-        'password' => 'hashed',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'password' => 'hashed',
+        ];
+    }
 
-    public function role()
+    public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class);
     }
