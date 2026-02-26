@@ -20,8 +20,6 @@ class Comparison extends Model
         'trx_id',
         'billing_system_id',
         'sender_no',
-        'field',
-        'type',
         'trx_date',
         'entity',
         'customer_id',

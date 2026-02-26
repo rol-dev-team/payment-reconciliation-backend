@@ -18,8 +18,6 @@ return new class extends Migration
             $table->string('trx_id');
             $table->foreignId('billing_system_id')->constrained('billing_systems');
             $table->string('sender_no');
-            $table->string('field')->nullable();
-            $table->string('type')->nullable();
             $table->dateTime('trx_date');
             $table->string('entity')->nullable();
             $table->string('customer_id')->nullable();
