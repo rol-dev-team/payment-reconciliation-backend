@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('wallets', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('payment_channel_id')->constrained('payment_channels');
-            $table->string('wallet_number');
-            $table->string('status')->nullable();
+            $table->foreignId('payment_channel_id')->index()->constrained()->cascadeOnDelete();
+            $table->string('wallet_number')->unique(); // Usually wallet numbers shouldn't repeat
+            $table->tinyInteger('status')->default(1)->comment('1: Active, 0: Inactive');
             $table->timestamps();
         });
     }

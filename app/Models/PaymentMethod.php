@@ -9,22 +9,10 @@ class PaymentMethod extends Model
 {
     use HasFactory;
 
-    protected $table = 'payment_methods';
+    protected $fillable = ['name'];
 
-    /**
-     * The attributes that are mass assignable.
-     */
-    protected $fillable = [
-        'name',
-    ];
-
-    /**
-     * Relationships
-     */
-
-    // PaymentMethod has many PaymentChannels
-    public function paymentChannels()
+    public function paymentChannels(): HasMany
     {
-        return $this->hasMany(PaymentChannel::class, 'payment_method_id');
+        return $this->hasMany(PaymentChannel::class);
     }
 }
