@@ -19,6 +19,7 @@ class BillingTransaction extends Model
      */
     protected $fillable = [
         'billing_system_id',
+        'row_index',
         'batch_id',
         'trx_id',
         'entity',

@@ -14,7 +14,7 @@ use Carbon\Carbon;
 class BillingTransactionController extends Controller
 {
     /**
-     * Professional method for uploading XLSX/Excel data in bulk
+     * Professional method for uploading XLSX/Excel data in bulk with Sequence Tracking
      */
     public function bulkUpload(Request $request): JsonResponse
     {
@@ -36,10 +36,12 @@ class BillingTransactionController extends Controller
 
         try {
             $rows = $request->file_data;
-            $chunks = array_chunk($rows, 500); // Split data into chunks of 500
+            $chunks = array_chunk($rows, 1000); // Increased chunk size for better performance
 
             DB::beginTransaction();
+            
             $totalCount = 0;
+            $currentRow = 1; // Excel row sequence tracking শুরু
 
             foreach ($chunks as $chunk) {
                 $batchData = [];
@@ -47,6 +49,7 @@ class BillingTransactionController extends Controller
                     $batchData[] = [
                         'billing_system_id' => $request->billing_system_id,
                         'batch_id'          => $batch->id,
+                        'row_index'         => $currentRow++, // Excel সিকুয়েন্স সেভ হচ্ছে
                         'trx_id'            => $row['trx_id'],
                         'entity'            => $row['entity'] ?? null,
                         'customer_id'       => $row['customer_id'],
@@ -73,7 +76,8 @@ class BillingTransactionController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Successfully processed $totalCount records in Batch #$batch->id"
+                'message' => "Successfully processed $totalCount records in Batch #$batch->id",
+                'batch_id' => $batch->id
             ], 201);
 
         } catch (\Exception $e) {
@@ -84,14 +88,18 @@ class BillingTransactionController extends Controller
     }
 
     /**
-     * CRUD: List all transactions
+     * CRUD: List all transactions (Sorted by row_index to match Excel)
      */
     public function index(): JsonResponse
     {
-        // Use pagination for large datasets (e.g., 20,000 records)
+        // latest() এর বদলে row_index অনুযায়ী সাজানো হয়েছে
+        $transactions = BillingTransaction::with(['billingSystem', 'batch'])
+            ->orderBy('row_index', 'asc')
+            ->paginate(50);
+
         return response()->json([
             'success' => true,
-            'data' => BillingTransaction::with(['billingSystem', 'batch'])->latest()->paginate(50)
+            'data' => $transactions
         ]);
     }
 

@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('vendor_transactions', function (Blueprint $table) {
             $table->id();
+            $table->integer('row_index')->nullable()->index();
             
             // Foreign key to batches table
             $table->foreignId('batch_id')

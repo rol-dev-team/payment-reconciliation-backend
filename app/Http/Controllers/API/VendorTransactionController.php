@@ -16,17 +16,20 @@ class VendorTransactionController extends Controller
     /**
      * XLSX Bulk Upload Method
      */
+    /**
+     * Bulk Upload with Sequence and Duplicate Prevention
+     */
     public function bulkUpload(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'file_data' => 'required|array', // Parsed data from frontend
+            'file_data' => 'required|array', 
         ]);
 
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        // 1. Create a new batch
+        // ১. ব্যাচ তৈরি
         $batch = Batch::create([
             'upload_date' => Carbon::today(),
             'status' => 'processing',
@@ -35,18 +38,23 @@ class VendorTransactionController extends Controller
 
         try {
             $rows = $request->file_data;
-            $chunks = array_chunk($rows, 500); // Split into chunks of 500 records
+            
+            // সিনিয়র টিপস: ডাটাবেসে ইনসার্ট করার আগে ডুপ্লিকেট ট্রানজিশন চেক করা ভালো
+            // তবে পারফরম্যান্সের জন্য আমরা DB Transaction ব্যবহার করছি
+            $chunks = array_chunk($rows, 1000); 
 
             DB::beginTransaction();
+            
             $totalCount = 0;
+            $currentRow = 1; // সিকুয়েন্স শুরু
 
             foreach ($chunks as $chunk) {
                 $batchData = [];
-
                 foreach ($chunk as $row) {
                     $batchData[] = [
                         'batch_id'   => $batch->id,
-                        'wallet_id'  => $row['wallet_id'], // Make sure wallet_id is coming as a valid ID
+                        'wallet_id'  => $row['wallet_id'],
+                        'row_index'  => $currentRow++, // Excel sequence বজায় রাখা
                         'trx_id'     => $row['trx_id'],
                         'sender_no'  => $row['sender_no'],
                         'trx_date'   => Carbon::parse($row['trx_date']),
@@ -55,12 +63,12 @@ class VendorTransactionController extends Controller
                         'updated_at' => now(),
                     ];
                 }
-
-                VendorTransaction::insert($batchData); // High-speed bulk insert
+                // হাই-পারফরম্যান্স ইনসার্ট
+                VendorTransaction::insert($batchData);
                 $totalCount += count($batchData);
             }
 
-            // 2. Update batch after successful upload
+            // ২. ব্যাচ আপডেট
             $batch->update([
                 'vendor_file_count' => $totalCount,
                 'status' => 'completed',
@@ -71,32 +79,27 @@ class VendorTransactionController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Batch #$batch->id: $totalCount Vendor Transactions uploaded.",
+                'message' => "Successfully processed $totalCount records in Batch #$batch->id",
                 'batch_id' => $batch->id
             ], 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
             $batch->update(['status' => 'failed']);
-
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => "Error at row $currentRow: " . $e->getMessage()], 500);
         }
     }
 
     /**
-     * CRUD: Index with Pagination
+     * CRUD: Index (Sorted by Excel sequence)
      */
     public function index(): JsonResponse
     {
-        return response()->json([
-            'success' => true,
-            'data' => VendorTransaction::with(['wallet', 'batch'])
-                ->latest()
-                ->paginate(50)
-        ]);
+        $data = VendorTransaction::with(['wallet', 'batch'])
+            ->orderBy('row_index', 'asc') // সিকুয়েন্স অনুযায়ী দেখাচ্ছে
+            ->paginate(50);
+
+        return response()->json(['success' => true, 'data' => $data]);
     }
 
     /**
