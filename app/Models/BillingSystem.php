@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BillingSystem extends Model
 {
@@ -11,19 +12,15 @@ class BillingSystem extends Model
 
     protected $table = 'billing_systems';
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $fillable = [
         'billing_name',
     ];
 
     /**
-     * Relationships
+     * A BillingSystem has many Comparisons.
+     * Use professional type hinting.
      */
-
-    // A BillingSystem has many Comparisons
-    public function comparisons()
+    public function comparisons(): HasMany
     {
         return $this->hasMany(Comparison::class, 'billing_system_id');
     }
