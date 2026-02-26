@@ -10,13 +10,13 @@ return new class extends Migration
     {
         Schema::create('batches', function (Blueprint $table) {
             $table->id();
-            $table->date('upload_date');
-            $table->integer('vendor_file_count')->default(0);
-            $table->integer('billing_file_count')->default(0);
-            $table->string('status')->default('processing');
-            $table->dateTime('started_at')->nullable();
-            $table->dateTime('completed_at')->nullable();
-            $table->timestamps();
+            $table->date('upload_date')->index(); // Index to quickly search by upload date
+            $table->integer('vendor_file_count')->default(0); // Number of vendor files in this batch
+            $table->integer('billing_file_count')->default(0); // Number of billing files in this batch
+            $table->string('status')->default('pending')->index(); // Index for filtering by batch status
+            $table->timestamp('started_at')->nullable(); // When the batch processing started
+            $table->timestamp('completed_at')->nullable(); // When the batch processing completed
+            $table->timestamps(); // Laravel created_at and updated_at
         });
     }
 

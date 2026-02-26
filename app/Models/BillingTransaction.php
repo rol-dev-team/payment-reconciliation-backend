@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+// This class is required for return type hinting
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BillingTransaction extends Model
 {
@@ -13,9 +15,11 @@ class BillingTransaction extends Model
 
     /**
      * The attributes that are mass assignable.
+     * 'batch_id' has been added according to the new migration.
      */
     protected $fillable = [
         'billing_system_id',
+        'batch_id',
         'trx_id',
         'entity',
         'customer_id',
@@ -33,12 +37,19 @@ class BillingTransaction extends Model
     ];
 
     /**
-     * Relationships
+     * Relationship: A BillingTransaction belongs to a BillingSystem.
      */
-
-    // BillingTransaction belongs to a BillingSystem
-    public function billingSystem()
+    public function billingSystem(): BelongsTo
     {
         return $this->belongsTo(BillingSystem::class, 'billing_system_id');
+    }
+
+    /**
+     * Relationship: A BillingTransaction belongs to a Batch.
+     * This is connected to the batch_id field from the new migration.
+     */
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(Batch::class, 'batch_id');
     }
 }

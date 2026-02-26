@@ -13,14 +13,20 @@ return new class extends Migration
     {
         Schema::create('billing_transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('billing_system_id')->constrained('billing_systems');
-            $table->string('trx_id');
-            $table->string('entity')->nullable();
-            $table->string('customer_id');
-            $table->string('sender_no');
-            $table->decimal('amount', 15, 2);
-            $table->dateTime('trx_date');
-            $table->timestamps();
+            
+            // Foreign key to billing_systems table, indexed for faster lookups
+            $table->foreignId('billing_system_id')->index()->constrained('billing_systems')->onDelete('cascade');
+            
+            // Optional foreign key to batches table, set null if batch is deleted
+            $table->foreignId('batch_id')->nullable()->index()->constrained('batches')->onDelete('set null');
+            
+            $table->string('trx_id')->index(); // Index to quickly search by transaction ID
+            $table->string('entity')->nullable(); 
+            $table->string('customer_id')->index(); // Index for generating reports by customer ID
+            $table->string('sender_no'); 
+            $table->decimal('amount', 15, 2); 
+            $table->dateTime('trx_date')->index(); // Index to filter transactions by date/time
+            $table->timestamps(); // Laravel created_at and updated_at
         });
     }
 

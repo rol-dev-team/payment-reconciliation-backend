@@ -55,6 +55,41 @@ Route::post('/login', [AuthController::class, 'login']);
 //         Route::put('{billingSystem}', [BillingSystemController::class, 'update']);
 //         Route::delete('{billingSystem}', [BillingSystemController::class, 'destroy']);
 //     });
+
+
+    // // Billing System CRUD
+    // Route::prefix('billing-systems')->group(function () {
+    //     Route::get('/', [BillingSystemController::class, 'index']);
+    //     Route::post('/', [BillingSystemController::class, 'store']);
+    //     Route::get('{billingSystem}', [BillingSystemController::class, 'show']);
+    //     Route::put('{billingSystem}', [BillingSystemController::class, 'update']);
+    //     Route::delete('{billingSystem}', [BillingSystemController::class, 'destroy']);
+    // });
+
+    // // Billing Transactions (Bulk Upload & CRUD)
+    // Route::prefix('billing-transactions')->group(function () {
+    //     Route::get('/', [BillingTransactionController::class, 'index']);
+    //     Route::post('/bulk-upload', [BillingTransactionController::class, 'bulkUpload']); // Batch upload method for billing transactions
+    //     Route::get('{billingTransaction}', [BillingTransactionController::class, 'show']);
+    //     Route::put('{billingTransaction}', [BillingTransactionController::class, 'update']);
+    //     Route::delete('{billingTransaction}', [BillingTransactionController::class, 'destroy']);
+    // });
+
+    // // Vendor Transactions (Bulk Upload & CRUD)
+    // Route::prefix('vendor-transactions')->group(function () {
+    //     Route::get('/', [VendorTransactionController::class, 'index']);
+    //     Route::post('/bulk-upload', [VendorTransactionController::class, 'bulkUpload']); // Batch upload method for vendor transactions
+    //     Route::get('{vendorTransaction}', [VendorTransactionController::class, 'show']);
+    //     Route::put('{vendorTransaction}', [VendorTransactionController::class, 'update']);
+    //     Route::delete('{vendorTransaction}', [VendorTransactionController::class, 'destroy']);
+    // });
+
+    // // Batches (Monitoring API)
+    // Route::prefix('batches')->group(function () {
+    //     Route::get('/', [BatchController::class, 'index']);
+    //     Route::get('{id}', [BatchController::class, 'show']);
+    //     Route::delete('{batch}', [BatchController::class, 'destroy']);
+    // });
 // });
 
     // without Middleware api list
@@ -92,4 +127,39 @@ Route::post('/login', [AuthController::class, 'login']);
         Route::get('{billingSystem}', [BillingSystemController::class, 'show']);
         Route::put('{billingSystem}', [BillingSystemController::class, 'update']);
         Route::delete('{billingSystem}', [BillingSystemController::class, 'destroy']);
+    });
+
+
+    // Billing System CRUD
+    Route::prefix('billing-systems')->group(function () {
+        Route::get('/', [BillingSystemController::class, 'index']);
+        Route::post('/', [BillingSystemController::class, 'store']);
+        Route::get('{billingSystem}', [BillingSystemController::class, 'show']);
+        Route::put('{billingSystem}', [BillingSystemController::class, 'update']);
+        Route::delete('{billingSystem}', [BillingSystemController::class, 'destroy']);
+    });
+
+    // Billing Transactions (Bulk Upload & CRUD)
+    Route::prefix('billing-transactions')->group(function () {
+        Route::get('/', [BillingTransactionController::class, 'index']);
+        Route::post('/bulk-upload', [BillingTransactionController::class, 'bulkUpload']); // Batch upload method for billing transactions
+        Route::get('{billingTransaction}', [BillingTransactionController::class, 'show']);
+        Route::put('{billingTransaction}', [BillingTransactionController::class, 'update']);
+        Route::delete('{billingTransaction}', [BillingTransactionController::class, 'destroy']);
+    });
+
+    // Vendor Transactions (Bulk Upload & CRUD)
+    Route::prefix('vendor-transactions')->group(function () {
+        Route::get('/', [VendorTransactionController::class, 'index']);
+        Route::post('/bulk-upload', [VendorTransactionController::class, 'bulkUpload']); // Batch upload method for vendor transactions
+        Route::get('{vendorTransaction}', [VendorTransactionController::class, 'show']);
+        Route::put('{vendorTransaction}', [VendorTransactionController::class, 'update']);
+        Route::delete('{vendorTransaction}', [VendorTransactionController::class, 'destroy']);
+    });
+
+    // Batches (Monitoring API)
+    Route::prefix('batches')->group(function () {
+        Route::get('/', [BatchController::class, 'index']);
+        Route::get('{id}', [BatchController::class, 'show']);
+        Route::delete('{batch}', [BatchController::class, 'destroy']);
     });
