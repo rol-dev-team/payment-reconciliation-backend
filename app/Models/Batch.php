@@ -10,13 +10,9 @@ class Batch extends Model
 {
     use HasFactory;
 
-    protected $table = 'batches';
-
-    /**
-     * Mass assignable fields
-     */
     protected $fillable = [
-        'upload_date',
+        'start_date',
+        'end_date',
         'vendor_file_count',
         'billing_file_count',
         'status',
@@ -24,28 +20,30 @@ class Batch extends Model
         'completed_at',
     ];
 
-    /**
-     * Cast fields to proper data types
-     */
     protected $casts = [
-        'upload_date' => 'date',
-        'started_at' => 'datetime',
+        'start_date'   => 'date',
+        'end_date'     => 'date',
+        'started_at'   => 'datetime',
         'completed_at' => 'datetime',
     ];
 
-    /**
-     * Relationship: A Batch has many BillingTransactions.
-     */
-    public function billingTransactions(): HasMany
+    public function vendorFiles(): HasMany
     {
-        return $this->hasMany(BillingTransaction::class, 'batch_id');
+        return $this->hasMany(VendorFile::class);
     }
 
-    /**
-     * Relationship: A Batch has many VendorTransactions.
-     */
+    public function billingFiles(): HasMany
+    {
+        return $this->hasMany(BillingFile::class);
+    }
+
     public function vendorTransactions(): HasMany
     {
-        return $this->hasMany(VendorTransaction::class, 'batch_id');
+        return $this->hasMany(VendorTransaction::class);
+    }
+
+    public function billingTransactions(): HasMany
+    {
+        return $this->hasMany(BillingTransaction::class);
     }
 }

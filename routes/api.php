@@ -6,6 +6,7 @@ use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\PaymentChannelController;
 use App\Http\Controllers\API\WalletController;
 use App\Http\Controllers\API\BillingSystemController;
+use App\Http\Controllers\API\ReconcileController;
 
 // PUBLIC routes
 Route::post('/login', [AuthController::class, 'login']);
@@ -92,6 +93,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
+Route::post('/reconcile', [ReconcileController::class, 'reconcile']);
     // // without Middleware api list
     // // User CRUD
     // Route::prefix('users')->group(function () {
