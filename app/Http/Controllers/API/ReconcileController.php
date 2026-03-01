@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Batch;
 use App\Models\VendorFile;
 use App\Models\BillingFile;
+use App\Models\VendorTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use App\Services\VendorNormalizationService;
 
 class ReconcileController extends Controller
 {
@@ -32,7 +34,7 @@ class ReconcileController extends Controller
         DB::beginTransaction();
 
         try {
-            // 1. Create batch
+            // 1️⃣ Create batch
             $batch = Batch::create([
                 'start_date'         => $request->input('start_date'),
                 'end_date'           => $request->input('end_date'),
@@ -42,22 +44,53 @@ class ReconcileController extends Controller
                 'started_at'         => now(),
             ]);
 
-            // 2. Store service/vendor files
-            foreach ($request->file('service_files') as $i => $file) {
-                $path = $file->store('vendor_files');
+            $baseFolder = "batch-{$batch->id}";
+            $normalizer = new VendorNormalizationService();
 
-                VendorFile::create([
+            // 2️⃣ Process vendor/service files
+            foreach ($request->file('service_files') as $i => $file) {
+
+                $path = $file->store("{$baseFolder}/vendor_files", 'private');
+
+                $vendorFile = VendorFile::create([
                     'batch_id'          => $batch->id,
                     'channel_id'        => $request->input('service_channel_id')[$i],
                     'wallet_id'         => $request->input('service_wallet_id')[$i],
                     'original_filename' => $file->getClientOriginalName(),
                     'stored_path'       => $path,
                 ]);
+
+                // ✅ Pass wallet_id as 3rd argument
+                $normalizedRows = $normalizer->normalize(
+                    $path,
+                    $vendorFile->channel_id,
+                    $vendorFile->wallet_id
+                );
+
+                $bulkInsert = [];
+                foreach ($normalizedRows as $index => $row) {
+                    $bulkInsert[] = [
+                        'batch_id'  => $vendorFile->batch_id,
+                        'wallet_id' => $vendorFile->wallet_id,
+                        'trx_id'    => $row['trx_id'],
+                        'sender_no' => $row['sender_no'],
+                        'trx_date'  => $row['trx_date'],
+                        'amount'    => $row['amount'],
+                        'row_index' => $index + 1, // ← Add this to preserve sequence
+                        'created_at'=> now(),
+                        'updated_at'=> now(),
+                    ];
+                }
+
+                if (!empty($bulkInsert)) {
+                    VendorTransaction::insert($bulkInsert);
+                }
+
             }
 
-            // 3. Store billing files
+            // 3️⃣ Store billing files
             foreach ($request->file('billing_files') as $i => $file) {
-                $path = $file->store('billing_files');
+                $path = $file->store("{$baseFolder}/billing_files", 'private');
 
                 BillingFile::create([
                     'batch_id'          => $batch->id,
@@ -67,6 +100,7 @@ class ReconcileController extends Controller
                 ]);
             }
 
+            // 4️⃣ Commit
             DB::commit();
 
             return response()->json([
