@@ -7,6 +7,8 @@ use App\Models\Batch;
 use App\Models\VendorFile;
 use App\Models\BillingFile;
 use App\Models\VendorTransaction;
+use App\Models\BillingTransaction;
+use App\Services\BillingNormalizationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -46,6 +48,7 @@ class ReconcileController extends Controller
 
             $baseFolder = "batch-{$batch->id}";
             $normalizer = new VendorNormalizationService();
+            $billingNormalizer = new BillingNormalizationService();
 
             // 2️⃣ Process vendor/service files
             foreach ($request->file('service_files') as $i => $file) {
@@ -88,17 +91,46 @@ class ReconcileController extends Controller
 
             }
 
-            // 3️⃣ Store billing files
+            // 3️⃣ Process billing files
             foreach ($request->file('billing_files') as $i => $file) {
+
                 $path = $file->store("{$baseFolder}/billing_files", 'private');
 
-                BillingFile::create([
+                $billingFile = BillingFile::create([
                     'batch_id'          => $batch->id,
                     'billing_system_id' => $request->input('billing_system_id')[$i],
                     'original_filename' => $file->getClientOriginalName(),
                     'stored_path'       => $path,
                 ]);
+
+                // 🔹 Normalize billing file
+                $normalizedRows = $billingNormalizer->normalize(
+                    $path,
+                    $billingFile->billing_system_id
+                );
+
+                $bulkInsert = [];
+
+                foreach ($normalizedRows as $index => $row) {
+                    $bulkInsert[] = [
+                        'batch_id'          => $billingFile->batch_id,
+                        'billing_system_id' => $billingFile->billing_system_id,
+                        'trx_id'            => $row['trx_id'],
+                        'entity'            => $row['entity'] ?? null,
+                        'customer_id'       => $row['customer_id'] ?? null,
+                        'sender_no'         => $row['sender_no'] ?? null,
+                        'amount'            => $row['amount'],
+                        'trx_date'          => $row['trx_date'],
+                        'created_at'        => now(),
+                        'updated_at'        => now(),
+                    ];
+                }
+
+                if (!empty($bulkInsert)) {
+                    BillingTransaction::insert($bulkInsert);
+                }
             }
+
 
             // 4️⃣ Commit
             DB::commit();

@@ -5,67 +5,82 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\BillingTransaction;
 use App\Models\Batch;
+use App\Models\BillingFile;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
+use App\Services\BillingNormalizationService;
 use Carbon\Carbon;
 
 class BillingTransactionController extends Controller
 {
     /**
-     * Professional method for uploading XLSX/Excel data in bulk with Sequence Tracking
+     * Upload multiple billing Excel/CSV files with batch tracking
      */
-    public function bulkUpload(Request $request): JsonResponse
+    public function uploadExcel(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'billing_system_id' => 'required|exists:billing_systems,id',
-            'file_data' => 'required|array', // Parsed array from frontend
+        $request->validate([
+            'files' => 'required|array',
+            'files.*' => 'required|file|mimes:xlsx,csv',
+            'billing_system_id' => 'required|array',
+            'billing_system_id.*' => 'required|exists:billing_systems,id',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
-        }
-
-        // 1. Create a batch and start tracking
-        $batch = Batch::create([
-            'upload_date' => Carbon::today(),
-            'status' => 'processing',
-            'started_at' => now(),
-        ]);
+        DB::beginTransaction();
 
         try {
-            $rows = $request->file_data;
-            $chunks = array_chunk($rows, 1000); // Increased chunk size for better performance
+            // 1️⃣ Create batch
+            $batch = Batch::create([
+                'upload_date' => Carbon::today(),
+                'status' => 'processing',
+                'started_at' => now(),
+                'billing_file_count' => count($request->file('files')),
+            ]);
 
-            DB::beginTransaction();
-            
+            $baseFolder = "batch-{$batch->id}";
+            $normalizer = new BillingNormalizationService();
             $totalCount = 0;
-            $currentRow = 1; // Excel row sequence tracking শুরু
+            $currentRow = 1;
 
-            foreach ($chunks as $chunk) {
-                $batchData = [];
-                foreach ($chunk as $row) {
-                    $batchData[] = [
-                        'billing_system_id' => $request->billing_system_id,
-                        'batch_id'          => $batch->id,
-                        'row_index'         => $currentRow++, // Excel সিকুয়েন্স সেভ হচ্ছে
-                        'trx_id'            => $row['trx_id'],
-                        'entity'            => $row['entity'] ?? null,
-                        'customer_id'       => $row['customer_id'],
-                        'sender_no'         => $row['sender_no'],
-                        'amount'            => $row['amount'],
-                        'trx_date'          => Carbon::parse($row['trx_date']),
-                        'created_at'        => now(),
-                        'updated_at'        => now(),
+            // 2️⃣ Process each uploaded file
+            foreach ($request->file('files') as $i => $file) {
+                $storedPath = $file->store("{$baseFolder}/billing_files", 'private');
+
+                // Save BillingFile record
+                $billingFile = BillingFile::create([
+                    'batch_id' => $batch->id,
+                    'billing_system_id' => $request->billing_system_id[$i],
+                    'original_filename' => $file->getClientOriginalName(),
+                    'stored_path' => $storedPath,
+                ]);
+
+                // Normalize the file
+                $normalizedRows = $normalizer->normalize($storedPath);
+
+                // Prepare bulk insert
+                $bulkInsert = [];
+                foreach ($normalizedRows as $row) {
+                    $bulkInsert[] = [
+                        'batch_id' => $batch->id,
+                        'billing_system_id' => $billingFile->billing_system_id,
+                        'trx_id' => $row['trx_id'],
+                        'entity' => $row['entity'] ?? null,
+                        'customer_id' => $row['customer_id'] ?? null,
+                        'sender_no' => $row['sender_no'] ?? null,
+                        'amount' => $row['amount'],
+                        'trx_date' => $row['trx_date'] ? Carbon::parse($row['trx_date']) : null,
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ];
                 }
-                // High-performance bulk insert
-                BillingTransaction::insert($batchData);
-                $totalCount += count($batchData);
+
+                if (!empty($bulkInsert)) {
+                    BillingTransaction::insert($bulkInsert);
+                    $totalCount += count($bulkInsert);
+                }
             }
 
-            // 2. Update batch after successful processing
+            // 3️⃣ Update batch
             $batch->update([
                 'billing_file_count' => $totalCount,
                 'status' => 'completed',
@@ -77,45 +92,49 @@ class BillingTransactionController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => "Successfully processed $totalCount records in Batch #$batch->id",
-                'batch_id' => $batch->id
+                'batch_id' => $batch->id,
             ], 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            $batch->update(['status' => 'failed']);
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            if (isset($batch)) {
+                $batch->update(['status' => 'failed']);
+            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to upload billing files',
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 
-    /**
-     * CRUD: List all transactions (Sorted by row_index to match Excel)
-     */
+    
     public function index(): JsonResponse
     {
-        // latest() এর বদলে row_index অনুযায়ী সাজানো হয়েছে
-        $transactions = BillingTransaction::with(['billingSystem', 'batch'])
-            ->orderBy('row_index', 'asc')
+      $transactions = BillingTransaction::with(['billingSystem', 'batch'])
+            ->orderBy('created_at', 'desc')
             ->paginate(50);
+
 
         return response()->json([
             'success' => true,
-            'data' => $transactions
+            'data' => $transactions,
         ]);
     }
 
     /**
-     * CRUD: Show a single transaction
+     * Show single transaction
      */
     public function show(BillingTransaction $billingTransaction): JsonResponse
     {
         return response()->json([
             'success' => true,
-            'data' => $billingTransaction->load(['billingSystem', 'batch'])
+            'data' => $billingTransaction->load(['billingSystem', 'batch']),
         ]);
     }
 
     /**
-     * CRUD: Update a transaction
+     * Update transaction
      */
     public function update(Request $request, BillingTransaction $billingTransaction): JsonResponse
     {
@@ -124,7 +143,7 @@ class BillingTransactionController extends Controller
     }
 
     /**
-     * CRUD: Delete a transaction
+     * Delete transaction
      */
     public function destroy(BillingTransaction $billingTransaction): JsonResponse
     {
