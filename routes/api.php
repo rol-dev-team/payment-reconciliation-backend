@@ -6,6 +6,9 @@ use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\PaymentChannelController;
 use App\Http\Controllers\API\WalletController;
 use App\Http\Controllers\API\BillingSystemController;
+use App\Http\Controllers\API\BillingTransactionController;
+use App\Http\Controllers\API\VendorTransactionController;
+use App\Http\Controllers\API\BatchController;
 
 // PUBLIC routes
 Route::post('/login', [AuthController::class, 'login']);
@@ -57,38 +60,49 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
 
-    // Billing System CRUD
-    Route::prefix('billing-systems')->group(function () {
-        Route::get('/', [BillingSystemController::class, 'index']);
-        Route::post('/', [BillingSystemController::class, 'store']);
-        Route::get('{billingSystem}', [BillingSystemController::class, 'show']);
-        Route::put('{billingSystem}', [BillingSystemController::class, 'update']);
-        Route::delete('{billingSystem}', [BillingSystemController::class, 'destroy']);
-    });
+    // // Billing Transactions (Bulk Upload & CRUD)
+    // Route::prefix('billing-transactions')->group(function () {
+    //     Route::get('/', [BillingTransactionController::class, 'index']);
+    //     Route::post('/bulk-upload', [BillingTransactionController::class, 'bulkUpload']); // Batch upload method for billing transactions
+    //     Route::get('{billingTransaction}', [BillingTransactionController::class, 'show']);
+    //     Route::put('{billingTransaction}', [BillingTransactionController::class, 'update']);
+    //     Route::delete('{billingTransaction}', [BillingTransactionController::class, 'destroy']);
+    // });
 
-    // Billing Transactions (Bulk Upload & CRUD)
-    Route::prefix('billing-transactions')->group(function () {
-        Route::get('/', [BillingTransactionController::class, 'index']);
-        Route::post('/bulk-upload', [BillingTransactionController::class, 'bulkUpload']); // Batch upload method for billing transactions
-        Route::get('{billingTransaction}', [BillingTransactionController::class, 'show']);
-        Route::put('{billingTransaction}', [BillingTransactionController::class, 'update']);
-        Route::delete('{billingTransaction}', [BillingTransactionController::class, 'destroy']);
-    });
+    // // Vendor Transactions (Bulk Upload & CRUD)
+    // Route::prefix('vendor-transactions')->group(function () {
+    //     Route::get('/', [VendorTransactionController::class, 'index']);
+    //     Route::post('/bulk-upload', [VendorTransactionController::class, 'bulkUpload']); // Batch upload method for vendor transactions
+    //     Route::get('{vendorTransaction}', [VendorTransactionController::class, 'show']);
+    //     Route::put('{vendorTransaction}', [VendorTransactionController::class, 'update']);
+    //     Route::delete('{vendorTransaction}', [VendorTransactionController::class, 'destroy']);
+    // });
 
-    // Vendor Transactions (Bulk Upload & CRUD)
-    Route::prefix('vendor-transactions')->group(function () {
-        Route::get('/', [VendorTransactionController::class, 'index']);
-        Route::post('/bulk-upload', [VendorTransactionController::class, 'bulkUpload']); // Batch upload method for vendor transactions
-        Route::get('{vendorTransaction}', [VendorTransactionController::class, 'show']);
-        Route::put('{vendorTransaction}', [VendorTransactionController::class, 'update']);
-        Route::delete('{vendorTransaction}', [VendorTransactionController::class, 'destroy']);
-    });
+    // // Batches (Monitoring API)
+    // Route::prefix('batches')->group(function () {
+    //     Route::get('/', [BatchController::class, 'index']);
+    //     Route::get('{id}', [BatchController::class, 'show']);
+    //     Route::delete('{batch}', [BatchController::class, 'destroy']);
+    // });
 
-    // Batches (Monitoring API)
+
+    /**
+     * Batches API Routes with Prefix
+     */
     Route::prefix('batches')->group(function () {
+        
+        // 1. Master API: /api/batches/store-and-process
+        Route::post('/store-and-process', [BatchController::class, 'storeAndProcess']);
+
+        // 2. List API: /api/batches
         Route::get('/', [BatchController::class, 'index']);
-        Route::get('{id}', [BatchController::class, 'show']);
-        Route::delete('{batch}', [BatchController::class, 'destroy']);
+
+        // 3. Details API: /api/batches/{id}
+        Route::get('/{id}', [BatchController::class, 'show']);
+
+        // 4. Delete API: /api/batches/{batch}
+        Route::delete('/{batch}', [BatchController::class, 'destroy']);
+        
     });
 });
 

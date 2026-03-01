@@ -10,15 +10,8 @@ class VendorTransaction extends Model
 {
     use HasFactory;
 
-    protected $table = 'vendor_transactions';
-
     protected $fillable = [
-        'batch_id',
-        'wallet_id',
-        'trx_id',
-        'sender_no',
-        'trx_date',
-        'amount',
+        'batch_id','wallet_id','row_index','trx_id','sender_no','amount','trx_date'
     ];
 
     protected $casts = [
@@ -26,19 +19,13 @@ class VendorTransaction extends Model
         'amount' => 'decimal:2',
     ];
 
-    /**
-     * Relationship: VendorTransaction belongs to a Wallet
-     */
     public function wallet(): BelongsTo
     {
-        return $this->belongsTo(Wallet::class, 'wallet_id');
+        return $this->belongsTo(Wallet::class,'wallet_id');
     }
 
-    /**
-     * Relationship: VendorTransaction belongs to a Batch
-     */
     public function batch(): BelongsTo
     {
-        return $this->belongsTo(Batch::class, 'batch_id');
+        return $this->belongsTo(Batch::class,'batch_id');
     }
 }
