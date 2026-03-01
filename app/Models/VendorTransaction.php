@@ -19,6 +19,7 @@ class VendorTransaction extends Model
         'sender_no',
         'trx_date',
         'amount',
+        'row_index',
     ];
 
     protected $casts = [

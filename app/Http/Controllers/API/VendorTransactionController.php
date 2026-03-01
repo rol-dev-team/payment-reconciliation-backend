@@ -10,26 +10,49 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use App\Services\VendorNormalizationService;
 
 class VendorTransactionController extends Controller
 {
     /**
-     * XLSX Bulk Upload Method
+     * Upload Excel & Insert Vendor Transactions
      */
+    public function uploadExcel(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,csv',
+            'wallet_id' => 'required|exists:wallets,id',
+            'channel_id' => 'required|integer',
+        ]);
+
+        $file = $request->file('file');
+        $storedPath = $file->store('private');
+
+        // Normalize rows using the service
+        $service = new VendorNormalizationService();
+        $normalizedRows = $service->normalize($storedPath, $request->channel_id, $request->wallet_id);
+
+        if (empty($normalizedRows)) {
+            return response()->json(['success' => false, 'message' => 'No valid rows found in file'], 422);
+        }
+
+        // Insert into DB using bulkUpload
+        return $this->bulkUpload(new Request(['file_data' => $normalizedRows]));
+    }
+
     /**
-     * Bulk Upload with Sequence and Duplicate Prevention
+     * Bulk Upload with Sequence and Batch Tracking
      */
     public function bulkUpload(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'file_data' => 'required|array', 
+            'file_data' => 'required|array',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        // ১. ব্যাচ তৈরি
         $batch = Batch::create([
             'upload_date' => Carbon::today(),
             'status' => 'processing',
@@ -38,15 +61,11 @@ class VendorTransactionController extends Controller
 
         try {
             $rows = $request->file_data;
-            
-            // সিনিয়র টিপস: ডাটাবেসে ইনসার্ট করার আগে ডুপ্লিকেট ট্রানজিশন চেক করা ভালো
-            // তবে পারফরম্যান্সের জন্য আমরা DB Transaction ব্যবহার করছি
-            $chunks = array_chunk($rows, 1000); 
+            $chunks = array_chunk($rows, 1000);
 
             DB::beginTransaction();
-            
             $totalCount = 0;
-            $currentRow = 1; // সিকুয়েন্স শুরু
+            $currentRow = 1;
 
             foreach ($chunks as $chunk) {
                 $batchData = [];
@@ -54,7 +73,7 @@ class VendorTransactionController extends Controller
                     $batchData[] = [
                         'batch_id'   => $batch->id,
                         'wallet_id'  => $row['wallet_id'],
-                        'row_index'  => $currentRow++, // Excel sequence বজায় রাখা
+                        'row_index'  => $currentRow++,
                         'trx_id'     => $row['trx_id'],
                         'sender_no'  => $row['sender_no'],
                         'trx_date'   => Carbon::parse($row['trx_date']),
@@ -63,12 +82,10 @@ class VendorTransactionController extends Controller
                         'updated_at' => now(),
                     ];
                 }
-                // হাই-পারফরম্যান্স ইনসার্ট
                 VendorTransaction::insert($batchData);
                 $totalCount += count($batchData);
             }
 
-            // ২. ব্যাচ আপডেট
             $batch->update([
                 'vendor_file_count' => $totalCount,
                 'status' => 'completed',
@@ -90,21 +107,16 @@ class VendorTransactionController extends Controller
         }
     }
 
-    /**
-     * CRUD: Index (Sorted by Excel sequence)
-     */
+    // CRUD Methods
     public function index(): JsonResponse
     {
         $data = VendorTransaction::with(['wallet', 'batch'])
-            ->orderBy('row_index', 'asc') // সিকুয়েন্স অনুযায়ী দেখাচ্ছে
+            ->orderBy('row_index', 'asc')
             ->paginate(50);
 
         return response()->json(['success' => true, 'data' => $data]);
     }
 
-    /**
-     * CRUD: Show single transaction
-     */
     public function show(VendorTransaction $vendorTransaction): JsonResponse
     {
         return response()->json([
@@ -113,29 +125,17 @@ class VendorTransactionController extends Controller
         ]);
     }
 
-    /**
-     * CRUD: Update transaction
-     */
     public function update(Request $request, VendorTransaction $vendorTransaction): JsonResponse
     {
         $vendorTransaction->update($request->all());
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Updated successfully'
-        ]);
+        return response()->json(['success' => true, 'message' => 'Updated successfully']);
     }
 
-    /**
-     * CRUD: Delete transaction
-     */
     public function destroy(VendorTransaction $vendorTransaction): JsonResponse
     {
         $vendorTransaction->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Deleted successfully'
-        ]);
+        return response()->json(['success' => true, 'message' => 'Deleted successfully']);
     }
 }
