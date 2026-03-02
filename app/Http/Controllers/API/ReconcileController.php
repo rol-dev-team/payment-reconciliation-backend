@@ -109,6 +109,12 @@ class ReconcileController extends Controller
                     $billingFile->billing_system_id
                 );
 
+
+                // ✅ ADD DEBUG HERE
+    \Log::info('Normalized rows count: ' . count($normalizedRows));
+    \Log::info('First row sample: ', $normalizedRows[0] ?? ['empty']);
+
+
                 $bulkInsert = [];
 
                 foreach ($normalizedRows as $index => $row) {
