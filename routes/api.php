@@ -9,6 +9,10 @@ use App\Http\Controllers\API\BillingSystemController;
 use App\Http\Controllers\API\ReconcileController;
 use App\Http\Controllers\API\ComparisonController;
 use App\Http\Controllers\API\ReconciliationSummaryController;
+use App\Http\Controllers\API\ComparisonSummaryController;
+use App\Http\Controllers\API\BatchController;
+use App\Http\Controllers\API\BillingTransactionController;
+use App\Http\Controllers\API\VendorTransactionController;
 
 // PUBLIC routes
 Route::post('/login', [AuthController::class, 'login']);
@@ -102,6 +106,9 @@ Route::post('/', [ReconciliationSummaryController::class, 'getSummary']);
         Route::get('{id}', [BatchController::class, 'show']);
         Route::delete('{batch}', [BatchController::class, 'destroy']);
     });
+
+    // Comparison Summary (Daily breakdown)
+    Route::get('/comparison-summary', [ComparisonSummaryController::class, 'summary']);
 });
 
 Route::post('/reconcile', [ReconcileController::class, 'reconcile']);
