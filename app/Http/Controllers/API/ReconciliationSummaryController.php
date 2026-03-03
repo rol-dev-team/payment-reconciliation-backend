@@ -41,7 +41,7 @@ class ReconciliationSummaryController extends Controller
         foreach ($runs as $run) {
             $rows = ComparisonHistory::where('batch_id', $run->batch_id)
                 ->where('process_no', $run->process_no)
-                ->get();
+                ->get(); 
 
             $total   = $rows->count();
             $matched = $rows->where('status', 'matched')->count();
