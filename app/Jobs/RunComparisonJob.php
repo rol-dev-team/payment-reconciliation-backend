@@ -88,7 +88,7 @@ class RunComparisonJob implements ShouldQueue
                     'process_no'        => $processNo,
                     'trx_id'            => $billingTrx->trx_id,
                     'billing_system_id' => $billingTrx->billing_system_id,
-                    'sender_no'         => $billingTrx->sender_no,
+                    'sender_no' => null,
                     'trx_date'          => $billingTrx->trx_date,
                     'entity'            => $billingTrx->entity,
                     'customer_id'       => $billingTrx->customer_id,
