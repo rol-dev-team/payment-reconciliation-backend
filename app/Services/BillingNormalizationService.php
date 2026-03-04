@@ -44,7 +44,6 @@ public function normalize(string $storedPath, ?int $billingSystemId = null): arr
             'trx_id'      => $rowData['trx_id'] ?? null,
             'entity'      => $rowData['entity'] ?? null,
             'customer_id' => $rowData['customer_id'] ?? null,
-            'sender_no'   => $rowData['payment_number'] ?? null,
             'amount'      => isset($rowData['amount']) && $rowData['amount'] !== ''
                                 ? floatval(str_replace(',', '', $rowData['amount']))
                                 : null,

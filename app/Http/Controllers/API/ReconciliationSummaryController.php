@@ -27,10 +27,12 @@ class ReconciliationSummaryController extends Controller
 
         // One row per (batch_id, process_no) combination
         $runs = ComparisonHistory::with('batch')
-          ->whereBetween('created_at', [
-                $request->input('start_date') . ' 00:00:00',
-                $request->input('end_date') . ' 23:59:59',
-            ])
+        ->whereHas('batch', function ($query) use ($request) {
+            $query->whereBetween('start_date', [
+                $request->input('start_date'),
+                $request->input('end_date'),
+            ]);
+        })
             ->select('batch_id', 'process_no', DB::raw('MIN(created_at) as run_date'))
             ->groupBy('batch_id', 'process_no')
             ->orderBy('run_date', 'asc')

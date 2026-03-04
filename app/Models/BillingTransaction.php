@@ -23,7 +23,6 @@ class BillingTransaction extends Model
         'trx_id',
         'entity',
         'customer_id',
-        'sender_no',
         'amount',
         'trx_date',
     ];

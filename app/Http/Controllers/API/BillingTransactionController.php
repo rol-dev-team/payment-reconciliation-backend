@@ -66,7 +66,6 @@ class BillingTransactionController extends Controller
                         'trx_id' => $row['trx_id'],
                         'entity' => $row['entity'] ?? null,
                         'customer_id' => $row['customer_id'] ?? null,
-                        'sender_no' => $row['sender_no'] ?? null,
                         'amount' => $row['amount'],
                         'trx_date' => $row['trx_date'] ? Carbon::parse($row['trx_date']) : null,
                         'created_at' => now(),
