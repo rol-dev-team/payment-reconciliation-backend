@@ -21,6 +21,8 @@ class Comparison extends Model
         'billing_system_id',
         'sender_no',
         'trx_date',
+        'vendor_trx_date',   
+        'billing_trx_date', 
         'entity',
         'customer_id',
         'amount',
@@ -36,6 +38,8 @@ class Comparison extends Model
      */
     protected $casts = [
         'trx_date' => 'datetime',
+        'vendor_trx_date'  => 'date',    
+        'billing_trx_date' => 'date', 
         'amount' => 'decimal:2',
         'is_vendor' => 'boolean',
         'is_billing_system' => 'boolean',
