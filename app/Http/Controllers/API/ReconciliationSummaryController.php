@@ -19,71 +19,68 @@ class ReconciliationSummaryController extends Controller
     ];
 
     public function getSummary(Request $request): JsonResponse
-    {
-        $request->validate([
-            'start_date' => 'required|date',
-            'end_date'   => 'required|date|after_or_equal:start_date',
-        ]);
+{
+    $request->validate([
+        'start_date' => 'required|date',
+        'end_date'   => 'required|date|after_or_equal:start_date',
+    ]);
 
-        // One row per (batch_id, process_no) combination
-        $runs = ComparisonHistory::with('batch')
-        ->whereHas('batch', function ($query) use ($request) {
-            $query->whereBetween('start_date', [
-                $request->input('start_date'),
-                $request->input('end_date'),
-            ]);
-        })
-            ->select('batch_id', 'process_no', DB::raw('MIN(created_at) as run_date'))
-            ->groupBy('batch_id', 'process_no')
-            ->orderBy('run_date', 'asc')
-            ->get();
+    // Get one row per batch — latest process_no only
+    $batches = DB::table('batches')
+        ->whereBetween('start_date', [
+            $request->input('start_date'),
+            $request->input('end_date'),
+        ])
+        ->orderBy('start_date', 'asc')
+        ->get();
 
-        $summary = [];
+    $summary = [];
 
-        foreach ($runs as $run) {
-            $rows = ComparisonHistory::where('batch_id', $run->batch_id)
-                ->where('process_no', $run->process_no)
-                ->get();
+    foreach ($batches as $batch) {
+        // Always read from comparisons — this is the current live state
+        $rows = \App\Models\Comparison::where('batch_id', $batch->id)->get();
 
-            $total   = $rows->count();
-            $matched = $rows->where('status', 'matched')->count();
+        if ($rows->isEmpty()) continue;
 
-            // Mismatch breakdown
-            $mismatch = [
-                'bkash_paybill' => 0,
-                'bkash_pgw'     => 0,
-                'nagad_paybill' => 0,
-                'nagad_pgw'     => 0,
-                'own_db'        => 0,
-            ];
+        $total   = $rows->count();
+        $matched = $rows->where('status', 'matched')->count();
 
-            foreach ($rows->where('status', 'mismatch') as $row) {
-                if (!$row->is_vendor) {
-                    // In billing but not in vendor
-                    $mismatch['own_db']++;
-                } else {
-                    // In vendor but not in billing — bucket by channel
-                    $label = self::CHANNEL_MAP[$row->channel_id] ?? null;
-                    if ($label) $mismatch[$label]++;
-                }
+        $mismatch = [
+            'bkash_paybill' => 0,
+            'bkash_pgw'     => 0,
+            'nagad_paybill' => 0,
+            'nagad_pgw'     => 0,
+            'own_db'        => 0,
+        ];
+
+        foreach ($rows->where('status', 'mismatch') as $row) {
+            if (!$row->is_vendor) {
+                $mismatch['own_db']++;
+            } else {
+                $label = self::CHANNEL_MAP[$row->channel_id] ?? null;
+                if ($label) $mismatch[$label]++;
             }
-
-           $summary[] = [
-                'batch_id'     => $run->batch_id,
-                'process_no'   => $run->process_no,
-                'start_date'   => $run->batch->start_date,  // ← add this
-                'end_date'     => $run->batch->end_date,    // ← add this
-                'transactions' => $total,
-                'matched'      => $matched,
-                'mismatch'     => array_merge($mismatch, [
-                    'total' => array_sum($mismatch),
-                ]),
-            ];
         }
 
-        return response()->json([
-            'success' => true,
-            'data'    => $summary,
-        ]);
+        // Get the latest process_no for this batch
+        $latestProcessNo = $rows->max('process_no');
+
+        $summary[] = [
+            'batch_id'     => $batch->id,
+            'process_no'   => $latestProcessNo,
+            'start_date'   => $batch->start_date,
+            'end_date'     => $batch->end_date,
+            'transactions' => $total,
+            'matched'      => $matched,
+            'mismatch'     => array_merge($mismatch, [
+                'total' => array_sum($mismatch),
+            ]),
+        ];
     }
+
+    return response()->json([
+        'success' => true,
+        'data'    => $summary,
+    ]);
+}
 }
