@@ -61,7 +61,7 @@ class VendorNormalizationService
                         'sender_no' => $rowData['initiator account no.'] ?? null,
                          'trx_id'    => $rowData['transaction id'] ?? null,
                          'trx_date'  => isset($rowData['transaction time']) ? Carbon::parse($rowData['transaction time'])->format('Y-m-d H:i:s') : null,
-                         'amount'    => isset($rowData['amount']) ? floatval(str_replace(',', '', $rowData['amount'])) : null,
+                         'amount' => isset($rowData['amount']) ? $this->parseAmount($rowData['amount']) : null,
                      ];
                       break;
 
@@ -70,7 +70,7 @@ class VendorNormalizationService
                             'sender_no' => $rowData['customer account'] ?? null,
                             'trx_id'    => $rowData['transaction id'] ?? null,
                             'trx_date'  => isset($rowData['transaction time']) ? Carbon::parse($rowData['transaction time'])->format('Y-m-d H:i:s') : null,
-                            'amount'    => isset($rowData['amount']) ? floatval(str_replace(',', '', $rowData['amount'])) : null,
+                           'amount' => isset($rowData['amount']) ? $this->parseAmount($rowData['amount']) : null,
                         ];
                         break;
 }
@@ -85,4 +85,10 @@ class VendorNormalizationService
 
         return $normalized;
     }
+        private function parseAmount(mixed $value): ?float
+        {
+        if (empty($value)) return null;
+        $cleaned = preg_replace('/[^\d.]/i', '', str_replace(',', '', (string)$value));
+        return $cleaned !== '' ? (float)$cleaned : null;
+        }
 }
