@@ -21,6 +21,7 @@ class BillingTransaction extends Model
         'billing_system_id',
         'batch_id',
         'trx_id',
+        'entity_id',
         'entity',
         'customer_id',
         'amount',

@@ -16,6 +16,7 @@ class ReconciliationSummaryController extends Controller
         2 => 'bkash_pgw',
         3 => 'nagad_paybill',
         4 => 'nagad_pgw',
+        5 => 'ssl',
     ];
 
     public function getSummary(Request $request): JsonResponse
@@ -50,6 +51,7 @@ class ReconciliationSummaryController extends Controller
             'bkash_pgw'     => 0,
             'nagad_paybill' => 0,
             'nagad_pgw'     => 0,
+            'ssl'     => 0,
             'own_db'        => 0,
         ];
 

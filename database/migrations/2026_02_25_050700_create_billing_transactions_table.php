@@ -21,6 +21,7 @@ return new class extends Migration
             $table->foreignId('batch_id')->nullable()->index()->constrained('batches')->onDelete('set null');
             
             $table->string('trx_id')->index(); // Index to quickly search by transaction ID
+            $table->integer('entity_id')->nullable(); 
             $table->string('entity')->nullable(); 
             $table->string('customer_id')->index(); // Index for generating reports by customer ID
             $table->string('sender_no')->nullable(); // Optional sender number

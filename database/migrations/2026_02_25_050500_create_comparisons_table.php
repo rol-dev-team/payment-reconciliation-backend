@@ -19,6 +19,7 @@ return new class extends Migration
             $table->foreignId('billing_system_id')->nullable()->constrained('billing_systems');
             $table->string('sender_no')->nullable();
             $table->dateTime('trx_date');
+            $table->integer('entity_id')->nullable(); 
             $table->string('entity')->nullable();
             $table->string('customer_id')->nullable();
             $table->decimal('amount', 15, 2)->nullable();

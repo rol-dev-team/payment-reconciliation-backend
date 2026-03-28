@@ -28,6 +28,7 @@ class ComparisonHistory extends Model
         'trx_date',
         'vendor_trx_date',   
         'billing_trx_date', 
+        'entity_id',
         'entity',
         'customer_id',
         'amount',

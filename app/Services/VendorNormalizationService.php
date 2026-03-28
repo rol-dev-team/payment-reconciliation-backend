@@ -73,7 +73,39 @@ class VendorNormalizationService
                            'amount' => isset($rowData['amount']) ? $this->parseAmount($rowData['amount']) : null,
                         ];
                         break;
-}
+                case 5: // SSL Payment
+                    $rawTrxId = ltrim($rowData['transaction id'] ?? '', "'");
+                    $rawDate = $rowData['date time'] ?? null;
+                    $parsedDate = null;
+
+                    if ($rawDate) {
+                        try {
+                            if ($rawDate instanceof \DateTimeInterface) {
+                                $parsedDate = Carbon::instance($rawDate)->format('Y-m-d H:i:s');
+                            } elseif (is_numeric($rawDate)) {
+                                $parsedDate = Carbon::createFromTimestamp(
+                                    \PhpOffice\PhpSpreadsheet\Shared\Date::excelToTimestamp((float)$rawDate)
+                                )->format('Y-m-d H:i:s');
+                            } else {
+                                // Use parse() instead of createFromFormat for better flexibility
+                                // This handles "2026-02-18 10:48:31" and "2/18/2026 10:35:55 AM"
+                                $parsedDate = Carbon::parse(trim($rawDate))->format('Y-m-d H:i:s');
+                            }
+                        } catch (\Exception $e) {
+                            $parsedDate = null;
+                        }
+                    }
+
+                    $entry = [
+                        // In the CSV, 'card number' contains values like 'KXDBI48EH9FQ'
+                        'sender_no' => $rowData['card number'] ?? null, 
+                        'trx_id'    => $rawTrxId ?: null,
+                        'trx_date'  => $parsedDate,
+                        // The CSV column is 'Amount (BDT)' which becomes 'amount (bdt)' in your header mapping
+                        'amount'    => isset($rowData['amount (bdt)']) ? $this->parseAmount($rowData['amount (bdt)']) : null,
+                    ];
+                    break;
+            }
 
             // Only keep valid rows with trx_id and amount
             if ($entry && $entry['trx_id'] && $entry['amount'] !== null) {
