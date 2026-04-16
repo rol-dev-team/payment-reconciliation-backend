@@ -55,7 +55,10 @@ class BillingTransactionController extends Controller
                 ]);
 
                 // Normalize the file
-                $normalizedRows = $normalizer->normalize($storedPath);
+                $normalizedRows = $normalizer->normalize(
+                    $storedPath,
+                    $billingFile->billing_system_id
+                );
 
                 // Prepare bulk insert
                 $bulkInsert = [];
@@ -64,6 +67,7 @@ class BillingTransactionController extends Controller
                         'batch_id' => $batch->id,
                         'billing_system_id' => $billingFile->billing_system_id,
                         'trx_id' => $row['trx_id'],
+                        'entity_id' => $row['entity_id'] ?? null,
                         'entity' => $row['entity'] ?? null,
                         'customer_id' => $row['customer_id'] ?? null,
                         'amount' => $row['amount'],
