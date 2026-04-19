@@ -14,33 +14,33 @@ use Illuminate\Support\Facades\Schema;
 //         // Table name updated to match the image: COMPARISONS_HISTORY
 //         Schema::create('comparisons_history', function (Blueprint $table) {
 //             $table->id(); // id PK (int)
-            
+
 //             // Foreign Keys
 //             $table->foreignId('batch_id')->constrained('batches')->cascadeOnDelete();
 //             $table->foreignId('billing_system_id')->constrained('billing_systems');
 //             $table->foreignId('channel_id')->constrained('payment_channels');
-            
+
 //             // Standard Fields
 //             $table->integer('process_no');
 //             $table->string('trx_id');
 //             $table->string('sender_no');
 //             $table->dateTime('trx_date');
-//             $table->integer('entity_id')->nullable(); 
+//             $table->integer('entity_id')->nullable();
 //             $table->string('entity')->nullable();
 //             $table->string('customer_id')->nullable();
 //             $table->decimal('amount', 15, 2)->nullable();
-            
+
 //             // wallet_id is shown as string in your image
-//             $table->string('wallet_id')->nullable(); 
-            
+//             $table->string('wallet_id')->nullable();
+
 //             $table->string('status')->nullable();
-            
+
 //             // Boolean Flags
 //             $table->boolean('is_vendor')->default(false);
 //             $table->boolean('is_billing_system')->default(false);
-            
+
 //             // Timestamps (created_at is explicitly in your image)
-//             $table->timestamps(); 
+//             $table->timestamps();
 //         });
 //     }
 
@@ -63,18 +63,18 @@ return new class extends Migration
     {
         Schema::create('comparisons_history', function (Blueprint $table) {
             $table->id();
- 
+
             // Link back to the parent comparison row
             $table->foreignId('comparison_id')->constrained('comparisons')->cascadeOnDelete();
- 
+
             // Tracks whether this row is the state BEFORE or AFTER an edit
             $table->enum('snapshot_type', ['before', 'after'])->default('before');
- 
+
             // Foreign Keys
             $table->foreignId('batch_id')->constrained('batches')->cascadeOnDelete();
             $table->foreignId('billing_system_id')->nullable()->constrained('billing_systems')->nullOnDelete();
             $table->foreignId('channel_id')->nullable()->constrained('payment_channels')->nullOnDelete();
- 
+
             // Standard Fields
             $table->integer('process_no')->nullable();
             $table->string('trx_id')->nullable();
@@ -86,20 +86,28 @@ return new class extends Migration
             $table->string('entity')->nullable();
             $table->string('customer_id')->nullable();
             $table->decimal('amount', 15, 2)->nullable();
- 
+
             // wallet_id stored as unsignedBigInteger to match wallets.id
             $table->unsignedBigInteger('wallet_id')->nullable();
- 
+
             $table->string('status')->nullable();
- 
+
             // Boolean Flags
             $table->boolean('is_vendor')->default(false);
             $table->boolean('is_billing_system')->default(false);
- 
+
             $table->timestamps();
+            $table->index('trx_date');
         });
+
+        DB::statement("
+            ALTER TABLE comparisons_history
+            PARTITION BY RANGE (YEAR(trx_date)*100 + MONTH(trx_date)) (
+                PARTITION pmax VALUES LESS THAN MAXVALUE
+            )
+        ");
     }
- 
+
     /**
      * Reverse the migrations.
      */
@@ -108,4 +116,3 @@ return new class extends Migration
         Schema::dropIfExists('comparisons_history');
     }
 };
- 
