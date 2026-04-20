@@ -12,32 +12,37 @@ class CreateMonthlyPartition extends Command
 
     public function handle()
     {
-        $monthsToCreate = 2; // create next 2 months
+        $monthsToCreate = 2; // next 2 months
 
         foreach (['comparisons', 'comparisons_history'] as $table) {
 
             for ($i = 0; $i < $monthsToCreate; $i++) {
 
-                $date = Carbon::now()->addMonths($i);
-                $partition = 'p' . $date->format('Ym');
-                $value = $date->format('Ym') + 1;
+                // current month start
+                $start = Carbon::now()->addMonths($i)->startOfMonth();
+
+                // next month start (partition upper bound)
+                $end = $start->copy()->addMonth();
+
+                $partition = 'p' . $start->format('Ym');
+                $value = $end->format('Y-m-d H:i:s'); // ✅ correct
 
                 // 🔍 check exists
                 $exists = DB::select("
                     SELECT PARTITION_NAME
                     FROM INFORMATION_SCHEMA.PARTITIONS
                     WHERE TABLE_SCHEMA = DATABASE()
-                    AND TABLE_NAME = '$table'
-                    AND PARTITION_NAME = '$partition'
-                ");
+                    AND TABLE_NAME = ?
+                    AND PARTITION_NAME = ?
+                ", [$table, $partition]);
 
                 if (empty($exists)) {
 
                     DB::statement("
                         ALTER TABLE $table
                         REORGANIZE PARTITION pmax INTO (
-                            PARTITION $partition VALUES LESS THAN ($value),
-                            PARTITION pmax VALUES LESS THAN MAXVALUE
+                            PARTITION $partition VALUES LESS THAN ('$value'),
+                            PARTITION pmax VALUES LESS THAN (MAXVALUE)
                         )
                     ");
 

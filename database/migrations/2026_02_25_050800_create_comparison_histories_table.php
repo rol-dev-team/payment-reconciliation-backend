@@ -62,18 +62,23 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('comparisons_history', function (Blueprint $table) {
-            $table->id();
+           // 🔥 auto increment id (manual define)
+            $table->bigIncrements('id');
+
+            // 🔥 MUST for partition (NOT NULL)
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->nullable();
 
             // Link back to the parent comparison row
-            $table->foreignId('comparison_id')->constrained('comparisons')->cascadeOnDelete();
+            $table->unsignedBigInteger('comparison_id')->nullable();
 
             // Tracks whether this row is the state BEFORE or AFTER an edit
             $table->enum('snapshot_type', ['before', 'after'])->default('before');
 
             // Foreign Keys
-            $table->foreignId('batch_id')->constrained('batches')->cascadeOnDelete();
-            $table->foreignId('billing_system_id')->nullable()->constrained('billing_systems')->nullOnDelete();
-            $table->foreignId('channel_id')->nullable()->constrained('payment_channels')->nullOnDelete();
+            $table->unsignedBigInteger('batch_id')->nullable();
+            $table->unsignedBigInteger('billing_system_id')->nullable();
+            $table->unsignedBigInteger('channel_id')->nullable();
 
             // Standard Fields
             $table->integer('process_no')->nullable();
@@ -96,14 +101,21 @@ return new class extends Migration
             $table->boolean('is_vendor')->default(false);
             $table->boolean('is_billing_system')->default(false);
 
-            $table->timestamps();
+
+             // 🔥 composite primary key (IMPORTANT)
+            $table->primary(['id', 'created_at']);
+
+            // indexes
+            $table->index('created_at');
             $table->index('trx_date');
+            $table->index('comparison_id');
         });
+
 
         DB::statement("
             ALTER TABLE comparisons_history
-            PARTITION BY RANGE (YEAR(trx_date)*100 + MONTH(trx_date)) (
-                PARTITION pmax VALUES LESS THAN MAXVALUE
+            PARTITION BY RANGE COLUMNS(created_at) (
+                PARTITION pmax VALUES LESS THAN (MAXVALUE)
             )
         ");
     }

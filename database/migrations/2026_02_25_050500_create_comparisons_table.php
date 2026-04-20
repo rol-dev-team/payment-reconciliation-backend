@@ -12,30 +12,41 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('comparisons', function (Blueprint $table) {
-            $table->id();
+            // 🔥 id auto increment (manual define)
+            $table->bigIncrements('id');
+
+            // MUST NOT NULL for partition
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->timestamp('updated_at')->nullable();
             $table->integer('batch_id');
             $table->integer('process_no');
             $table->string('trx_id');
-            $table->foreignId('billing_system_id')->nullable()->constrained('billing_systems');
+            $table->unsignedBigInteger('billing_system_id')->nullable();
             $table->string('sender_no')->nullable();
             $table->dateTime('trx_date');
             $table->integer('entity_id')->nullable();
             $table->string('entity')->nullable();
             $table->string('customer_id')->nullable();
             $table->decimal('amount', 15, 2)->nullable();
-            $table->foreignId('channel_id')->nullable()->constrained('payment_channels');
-            $table->foreignId('wallet_id')->nullable()->constrained('wallets');
+            $table->unsignedBigInteger('channel_id')->nullable();
+            $table->unsignedBigInteger('wallet_id')->nullable();
             $table->string('status')->nullable();
             $table->boolean('is_vendor')->default(false);
             $table->boolean('is_billing_system')->default(false);
-            $table->timestamps();
+
+            // 🔥 composite primary key (IMPORTANT)
+            $table->primary(['id', 'created_at']);
+
+            // indexes
+            $table->index('created_at');
             $table->index('trx_date');
         });
 
         DB::statement("
             ALTER TABLE comparisons
-            PARTITION BY RANGE (YEAR(trx_date)*100 + MONTH(trx_date)) (
-                PARTITION pmax VALUES LESS THAN MAXVALUE
+            PARTITION BY RANGE COLUMNS(created_at) (
+                PARTITION pmax VALUES LESS THAN (MAXVALUE)
             )
         ");
     }
